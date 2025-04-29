@@ -20,10 +20,10 @@ local function calculate_visual_complexity(lines)
 
     for _, line in ipairs(lines) do
         complexity = complexity + 1
-        if line:match("function") or line:match("local function") then
+        if line:match("%f[%a]function%f[%A]") or line:match("%f[%a]local%s+function%f[%A]") then
             function_count = function_count + 1
         end
-        if line:match("if") or line:match("else") or line:match("while") or line:match("for") then
+        if line:match("%f[%a]if%f[%A]") or line:match("%f[%a]else%f[%A]") or line:match("%f[%a]while%f[%A]") or line:match("%f[%a]for%f[%A]") then
             conditional_count = conditional_count + 1
         end
     end
@@ -44,11 +44,32 @@ local function display_visual_complexity(bufnr, start_line, end_line)
     })
 end
 
+-- Function to check if Tree-sitter parser is installed
+local function check_treesitter_parser(filetype)
+    local parsers = require("nvim-treesitter.parsers").get_parser_configs()
+    if not parsers[filetype] then
+        local choice = vim.fn.confirm(
+            string.format("Tree-sitter parser for %s is not installed. Install it?", filetype),
+            "&Yes\n&No"
+        )
+        if choice == 1 then
+            vim.cmd("TSInstall " .. filetype)
+        else
+            return false
+        end
+    end
+    return true
+end
+
 -- Function to parse the buffer using Tree-sitter
 local function parse_buffer_with_treesitter()
     local bufnr = vim.api.nvim_get_current_buf()
     local filetype = vim.bo[bufnr].filetype
     if not vim.tbl_contains(M.config.enabled_filetypes, filetype) then
+        return
+    end
+
+    if not check_treesitter_parser(filetype) then
         return
     end
 
