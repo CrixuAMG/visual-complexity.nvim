@@ -9,8 +9,10 @@ local defaults = {
     show_bar = true,
     weights = {
         line = 1.0,
-        func = 2.0,
-        conditional = 1.5,
+        func = 3.0,
+        conditional = 2.0,
+        indent = 0.1,
+        clump = 1.0,
     },
     severity_thresholds = {
         { max = 10, group = "Comment" },

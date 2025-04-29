@@ -2,37 +2,41 @@ local M = {}
 
 function M.analyze_line(line)
     local func_patterns = {
-        "%f[%a]function%f[%A]",
-        "%f[%a]local%s+function%f[%A]"
+        { pattern = "%f[%a]function%f[%A]", reason = "Function declaration" },
+        { pattern = "%f[%a]local%s+function%f[%A]", reason = "Local function" }
     }
 
     local cond_patterns = {
-        "%f[%a]if%f[%A]",
-        "%f[%a]else%f[%A]",
-        "%f[%a]while%f[%A]",
-        "%f[%a]for%f[%A]",
-        "%f[%a]try%f[%A]",
-        "%f[%a]catch%f[%A]"
+        { pattern = "%f[%a]if%f[%A]", reason = "If statement" },
+        { pattern = "%f[%a]else%f[%A]", reason = "Else clause" },
+        { pattern = "%f[%a]elseif%f[%A]", reason = "Elseif clause" },
+        { pattern = "%f[%a]while%f[%A]", reason = "While loop" },
+        { pattern = "%f[%a]for%f[%A]", reason = "For loop" },
+        { pattern = "%f[%a]try%f[%A]", reason = "Try block" },
+        { pattern = "%f[%a]catch%f[%A]", reason = "Catch block" },
     }
 
     local is_function = false
     local is_conditional = false
+    local reasons = {}
 
-    for _, pat in ipairs(func_patterns) do
-        if line:match(pat) then
+    for _, entry in ipairs(func_patterns) do
+        if line:match(entry.pattern) then
             is_function = true
+            table.insert(reasons, entry.reason)
             break
         end
     end
 
-    for _, pat in ipairs(cond_patterns) do
-        if line:match(pat) then
+    for _, entry in ipairs(cond_patterns) do
+        if line:match(entry.pattern) then
             is_conditional = true
+            table.insert(reasons, entry.reason)
             break
         end
     end
 
-    return is_function and 1 or 0, is_conditional and 1 or 0
+    return is_function and 1 or 0, is_conditional and 1 or 0, reasons
 end
 
 function M.get_highlight_group(score)

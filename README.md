@@ -40,6 +40,8 @@ require('visual-complexity').setup({
         line = 1.0,
         func = 2.0,
         conditional = 1.5,
+        indent = 0.1,
+        clump = 1.0,
     },
     severity_thresholds = {
         { max = 10, group = "Comment" },
@@ -54,6 +56,7 @@ require('visual-complexity').setup({
 ## 📈 Commands
 
 - `:VisualComplexity` — Print total file complexity in the command area.
+- `:ToggleComplexityReasons` — Toggle showing the reasons for the displayed complexity.
 
 ---
 

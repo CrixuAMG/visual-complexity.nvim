@@ -7,24 +7,92 @@ config_module.setup()
 local util = require('visual-complexity.util')
 local ns_id = vim.api.nvim_create_namespace("nvim_visual_complexity")
 
+-- Load commands module
+local commands = require('visual-complexity.commands')
+
+-- Default show_reasons flag
+commands.show_reasons = false
+
 local function calculate_visual_complexity(lines)
     local weights = M.config.options.weights
     local raw_lines = #lines
     local func_count, cond_count = 0, 0
+    local indent_score, clump_penalty = 0, 0
+    local non_empty_streak = 0
 
-    for _, line in ipairs(lines) do
-        local f, c = util.analyze_line(line)
+    local annotations = {}
+
+    for i, line in ipairs(lines) do
+        local f, c, reasons = util.analyze_line(line)
         func_count = func_count + f
         cond_count = cond_count + c
+
+        -- Add annotations if functions or conditionals are detected
+        if f > 0 then
+            table.insert(annotations, { line = i - 1, reason = "Function detected" })
+        end
+        if c > 0 then
+            table.insert(annotations, { line = i - 1, reason = "Conditional detected" })
+        end
+
+        -- Check for indentation issues
+        local indent = line:match("^(%s*)")
+        local indent_len = indent and #indent or 0
+        indent_score = indent_score + indent_len
+
+        if indent_len >= 8 then
+            table.insert(annotations, {
+                line = i - 1,
+                reason = string.format("Deep indentation (%d spaces)", indent_len),
+            })
+        end
+
+        -- Check for clumping issues (too many lines without spacing)
+        if line:match("^%s*$") then
+            non_empty_streak = 0
+        else
+            non_empty_streak = non_empty_streak + 1
+            if non_empty_streak > 10 then
+                clump_penalty = clump_penalty + 1
+                table.insert(annotations, {
+                    line = i - 1,
+                    reason = "Clumping detected: too many lines without spacing",
+                })
+            end
+        end
     end
 
-    local complexity = raw_lines * weights.line + func_count * weights.func + cond_count * weights.conditional
-    return complexity, func_count, cond_count
+    local complexity =
+        raw_lines * weights.line +
+        func_count * weights.func +
+        cond_count * weights.conditional +
+        indent_score * (weights.indent or 0.1) +
+        clump_penalty * (weights.clump or 1.0)
+
+    return complexity, func_count, cond_count, annotations
+end
+
+local function show_complexity_annotations(bufnr, annotations)
+    local diagnostics = {}
+    -- Only add diagnostics if show_reasons is enabled
+    if commands.show_reasons then
+        for _, ann in ipairs(annotations) do
+            table.insert(diagnostics, {
+                lnum = ann.line,
+                col = 0,
+                severity = vim.diagnostic.severity.INFO,
+                source = "visual-complexity",
+                message = ann.reason,
+            })
+        end
+    end
+    -- Set the diagnostics
+    vim.diagnostic.set(ns_id, bufnr, diagnostics, {})
 end
 
 local function display_visual_complexity(bufnr, start_line, end_line)
     local lines = vim.api.nvim_buf_get_lines(bufnr, start_line, end_line + 1, false)
-    local complexity, func_count, cond_count = calculate_visual_complexity(lines)
+    local complexity, func_count, cond_count, annotations = calculate_visual_complexity(lines)
 
     local hl_group = util.get_highlight_group(complexity)
     local text = string.format(M.config.options.virtual_text_format, complexity, func_count, cond_count)
@@ -37,6 +105,9 @@ local function display_visual_complexity(bufnr, start_line, end_line)
         virt_text = {{text, hl_group}},
         virt_text_pos = "eol",
     })
+
+    -- Show annotations if reasons are enabled
+    show_complexity_annotations(bufnr, annotations)
 end
 
 local function ensure_treesitter_parser(filetype)
