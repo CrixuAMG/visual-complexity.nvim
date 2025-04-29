@@ -89,6 +89,9 @@ local function analyze_current_buffer()
         return
     end
 
+    -- Clear previous virtual text
+    vim.api.nvim_buf_clear_namespace(bufnr, ns_id, 0, -1)
+
     local tree = parser:parse()[1]
     if not tree then
         vim.notify("[visual-complexity] Could not parse tree", vim.log.levels.ERROR)
