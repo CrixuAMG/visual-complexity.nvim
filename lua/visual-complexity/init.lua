@@ -1,16 +1,6 @@
 local M = {}
 
--- Default configuration
-M.config = {
-    virtual_text_format = "Complexity: %d, Functions: %d, Conditionals: %d",
-    highlight_group = "Comment",
-    complexity_thresholds = {
-        low = 10,
-        medium = 20,
-        high = 30,
-    },
-    enabled_filetypes = {"lua", "javascript", "typescript", "php"},
-}
+M.config = require('visual-complexity.config')
 
 -- Function to calculate visual complexity
 local function calculate_visual_complexity(lines)
@@ -23,7 +13,7 @@ local function calculate_visual_complexity(lines)
         if line:match("%f[%a]function%f[%A]") or line:match("%f[%a]local%s+function%f[%A]") then
             function_count = function_count + 1
         end
-        if line:match("%f[%a]if%f[%A]") or line:match("%f[%a]else%f[%A]") or line:match("%f[%a]while%f[%A]") or line:match("%f[%a]for%f[%A]") then
+        if line:match("%f[%a]if%f[%A]") or line:match("%f[%a]else%f[%A]") or line:match("%f[%a]while%f[%A]") or line:match("%f[%a]for%f[%A]") or line:match("%f[%a]try%f[%A]") or line:match("%f[%a]catch%f[%A]") then
             conditional_count = conditional_count + 1
         end
     end
