@@ -1,6 +1,7 @@
-# Check Lua Formatting
 name: Check Lua Formatting
-on: pull_request_target
+on:
+  pull_request_target: # This triggers the action on pull requests from forks
+    types: [opened, synchronize, reopened] # Specify the types of pull request events to trigger the action
 
 jobs:
   stylua-check:
@@ -14,6 +15,6 @@ jobs:
       - name: Stylua Check
         uses: JohnnyMorganz/stylua-action@v3
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }} # This token is automatically provided by GitHub
           version: latest
           args: --check .
