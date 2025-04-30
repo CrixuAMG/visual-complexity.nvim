@@ -1,0 +1,37 @@
+name: Check Lua Formatting
+
+on:
+  pull_request: # Triggers on pull requests, including forks
+    types: [opened, synchronize, reopened]
+  pull_request_target: # Triggers on internal pull requests
+    types: [opened, synchronize, reopened]
+
+jobs:
+  stylua-check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # Minimum permissions for forks
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v3
+
+      # Conditional job for forks
+      - name: Check if this is a fork
+        id: check_fork
+        run: echo "isFork=${{ github.event.pull_request.head.repo.fork }}" >> $GITHUB_ENV
+
+      - name: Run Stylua on Forks
+        if: env.isFork == 'true'
+        uses: JohnnyMorganz/stylua-action@v3
+        with:
+          version: latest
+          args: --check .
+
+      # Job for internal pull requests
+      - name: Run Stylua on Internal PRs
+        if: env.isFork != 'true'
+        uses: JohnnyMorganz/stylua-action@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }} # Write permissions for internal PRs
+          version: latest
+          args: --check .

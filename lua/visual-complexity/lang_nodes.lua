@@ -1,15 +1,15 @@
 local M = {}
 
 M.language_node_map = {
-    lua = {["function"] = true},
-    python = {function_definition = true, class_definition = true},
-    javascript = {function_declaration = true, method_definition = true, class_declaration = true},
-    typescript = {function_declaration = true, method_definition = true, class_declaration = true},
-    php = {method_declaration = true, function_definition = true, class_declaration = true},
-    go = {function_declaration = true, method_declaration = true},
-    rust = {function_item = true, impl_item = true},
-    c = {function_definition = true},
-    cpp = {function_definition = true},
+	lua = { ["function"] = true },
+	python = { function_definition = true, class_definition = true },
+	javascript = { function_declaration = true, method_definition = true, class_declaration = true },
+	typescript = { function_declaration = true, method_definition = true, class_declaration = true },
+	php = { method_declaration = true, function_definition = true, class_declaration = true },
+	go = { function_declaration = true, method_declaration = true },
+	rust = { function_item = true, impl_item = true },
+	c = { function_definition = true },
+	cpp = { function_definition = true },
 }
 
 return M
