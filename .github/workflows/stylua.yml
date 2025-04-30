@@ -4,7 +4,6 @@ on: pull_request_target
 
 jobs:
   stylua-check:
-    if: github.repository == 'CrixuAMG/visual-complexity.nvim'
     name: Stylua Check
     runs-on: ubuntu-latest
     steps:
