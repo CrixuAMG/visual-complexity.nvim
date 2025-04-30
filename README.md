@@ -17,7 +17,7 @@ Using `lazy.nvim`:
 
 ```lua
 {
-  'yourusername/visual-complexity.nvim',
+  'crixuamg/visual-complexity.nvim',
   config = function()
     require('visual-complexity').setup()
   end
