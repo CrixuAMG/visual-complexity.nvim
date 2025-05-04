@@ -6,12 +6,9 @@ config_module.setup()
 
 local util = require("visual-complexity.util")
 local ns_id = vim.api.nvim_create_namespace("nvim_visual_complexity")
+local annotation_ns_id = vim.api.nvim_create_namespace("nvim_visual_complexity_annotations")
 
--- Load commands module
-local commands = require("visual-complexity.commands")
-
--- Default show_reasons flag
-commands.show_reasons = false
+require("visual-complexity.commands")
 
 local function calculate_visual_complexity(lines)
 	local weights = M.config.options.weights
@@ -29,10 +26,16 @@ local function calculate_visual_complexity(lines)
 
 		-- Add annotations if functions or conditionals are detected
 		if f > 0 then
-			table.insert(annotations, { line = i - 1, reason = "Function detected" })
+			table.insert(annotations, {
+				line = i - 1,
+				reason = "Function detected - +" .. weights.func .. " score",
+			})
 		end
 		if c > 0 then
-			table.insert(annotations, { line = i - 1, reason = "Conditional detected" })
+			table.insert(annotations, {
+				line = i - 1,
+				reason = "Conditional detected - +" .. weights.conditional .. " score",
+			})
 		end
 
 		-- Check for indentation issues
@@ -43,7 +46,11 @@ local function calculate_visual_complexity(lines)
 		if indent_len >= 8 then
 			table.insert(annotations, {
 				line = i - 1,
-				reason = string.format("Deep indentation (%d spaces)", indent_len),
+				reason = string.format(
+					"Deep indentation (%d spaces) - +%.1f score",
+					indent_len,
+					(weights.indent or 0.1) * indent_len
+				),
 			})
 		end
 
@@ -56,7 +63,9 @@ local function calculate_visual_complexity(lines)
 				clump_penalty = clump_penalty + 1
 				table.insert(annotations, {
 					line = i - 1,
-					reason = "Clumping detected: too many lines without spacing",
+					reason = "Clumping detected: too many lines without spacing - +"
+						.. (weights.clump or 1.0)
+						.. " score",
 				})
 			end
 		end
@@ -72,27 +81,30 @@ local function calculate_visual_complexity(lines)
 end
 
 local function show_complexity_annotations(bufnr, annotations)
-	local diagnostics = {}
-	-- Only add diagnostics if show_reasons is enabled
-	if commands.show_reasons then
-		for _, ann in ipairs(annotations) do
-			table.insert(diagnostics, {
-				lnum = ann.line,
-				col = 0,
-				severity = vim.diagnostic.severity.INFO,
-				source = "visual-complexity",
-				message = ann.reason,
+	-- Clear the annotation namespace
+	vim.api.nvim_buf_clear_namespace(bufnr, annotation_ns_id, 0, -1)
+
+	-- Add annotations as virtual text
+	for _, ann in ipairs(annotations) do
+		-- Ensure the line number is correct and within bounds
+		if ann.line >= 0 and ann.line < vim.api.nvim_buf_line_count(bufnr) then
+			vim.api.nvim_buf_set_extmark(bufnr, annotation_ns_id, ann.line, 0, {
+				virt_text = { { ann.reason, "Comment" } }, -- Use "Comment" highlight group
+				virt_text_pos = "eol", -- Display at the end of the line
 			})
+		else
+			-- Debugging: Print a warning if line number is out of bounds
+			print(string.format("Annotation line out of range: %d", ann.line))
 		end
 	end
-	-- Set the diagnostics
-	vim.diagnostic.set(ns_id, bufnr, diagnostics, {})
 end
 
 local function display_visual_complexity(bufnr, start_line, end_line)
+	-- Get lines from the buffer
 	local lines = vim.api.nvim_buf_get_lines(bufnr, start_line, end_line + 1, false)
 	local complexity, func_count, cond_count, annotations = calculate_visual_complexity(lines)
 
+	-- Generate the visual text
 	local hl_group = util.get_highlight_group(complexity)
 	local text = string.format(M.config.options.virtual_text_format, complexity, func_count, cond_count)
 
@@ -100,24 +112,40 @@ local function display_visual_complexity(bufnr, start_line, end_line)
 		text = util.create_bar(complexity) .. "  " .. text
 	end
 
+	-- Set virtual text for bar and counts
 	vim.api.nvim_buf_set_extmark(bufnr, ns_id, start_line, 0, {
 		virt_text = { { text, hl_group } },
 		virt_text_pos = "eol",
 	})
 
-	-- Show annotations if reasons are enabled
+	-- Show annotations
 	show_complexity_annotations(bufnr, annotations)
 end
 
 local function ensure_treesitter_parser(filetype)
-	local parsers = require("nvim-treesitter.parsers").get_parser_configs()
-	if not parsers[filetype] then
+	-- Check if parser is available in configs
+	local parsers = require("nvim-treesitter.parsers")
+	if not parsers.get_parser_configs()[filetype] then
+		vim.notify("[visual-complexity] No Tree-sitter parser configuration for " .. filetype, vim.log.levels.WARN)
+		return false
+	end
+
+	-- Check if parser is installed
+	if not parsers.has_parser(filetype) then
 		local ok = vim.fn.confirm(string.format("Install Tree-sitter parser for '%s'?", filetype), "&Yes\n&No") == 1
 		if ok then
 			vim.cmd("TSInstall " .. filetype)
+			-- Wait for installation but with timeout
+			local timeout = 30 -- seconds
+			local start_time = vim.loop.now()
+			while not parsers.has_parser(filetype) and (vim.loop.now() - start_time) < timeout * 1000 do
+				vim.cmd("sleep 100m") -- Wait 100ms
+			end
+			return parsers.has_parser(filetype)
 		end
-		return ok
+		return false
 	end
+
 	return true
 end
 
@@ -144,7 +172,18 @@ local function analyze_current_buffer()
 	local bufnr = vim.api.nvim_get_current_buf()
 	local filetype = vim.bo[bufnr].filetype
 
+	if not vim.api.nvim_buf_is_valid(bufnr) then
+		return
+	end
+
 	if not vim.tbl_contains(M.config.options.enabled_filetypes, filetype) then
+		return
+	end
+
+	local max_filesize = M.config.options.max_filesize or 100000 -- 100KB default
+	local filesize = vim.fn.getfsize(vim.api.nvim_buf_get_name(bufnr))
+	if filesize > max_filesize then
+		vim.notify("[visual-complexity] File too large for analysis", vim.log.levels.INFO)
 		return
 	end
 
@@ -176,12 +215,22 @@ vim.api.nvim_create_autocmd({ "BufEnter", "TextChanged", "InsertLeave" }, {
 	callback = analyze_current_buffer,
 })
 
+vim.api.nvim_create_autocmd({ "BufDelete", "BufUnload" }, {
+	pattern = "*",
+	callback = function(opts)
+		vim.api.nvim_buf_clear_namespace(opts.buf, ns_id, 0, -1)
+	end,
+})
+
 function M.setup(user_config)
 	M.config.setup(user_config)
 end
 
 function M.statusline_complexity()
 	local bufnr = vim.api.nvim_get_current_buf()
+	if not vim.api.nvim_buf_is_valid(bufnr) then
+		return "C: --"
+	end
 	local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
 	local complexity = calculate_visual_complexity(lines)
 	return string.format("C: %.1f", complexity)
