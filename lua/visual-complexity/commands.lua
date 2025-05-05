@@ -24,7 +24,21 @@ function M.show_file_complexity(calculate_visual_complexity)
 end
 
 vim.api.nvim_create_user_command("VisualComplexity", function()
-	M.show_file_complexity(require("visual-complexity.complexity_calculations").calculate)
+	local bufnr = vim.api.nvim_get_current_buf()
+	if not vim.api.nvim_buf_is_valid(bufnr) then
+		return
+	end
+
+	local filetype = vim.api.nvim_buf_get_option(bufnr, "filetype")
+	if not require("visual-complexity.treesitter").ensure_parser(filetype) then
+		return
+	end
+
+	local parser = vim.treesitter.get_parser(bufnr, filetype)
+	local tree = parser:parse()[1]
+	local root = tree:root()
+
+	require("visual-complexity.treesitter").traverse_tree(bufnr, root, filetype)
 end, {})
 
 return M

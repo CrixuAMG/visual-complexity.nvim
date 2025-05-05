@@ -48,6 +48,7 @@ require('visual-complexity').setup({
         { max = 25, group = "WarningMsg" },
         { max = math.huge, group = "ErrorMsg" },
     },
+    threshold_for_warnings = 15, -- Threshold for showing warnings above lines
 })
 ```
 
@@ -67,6 +68,24 @@ Add this to your statusline (e.g. lualine section):
 ```lua
 require('visual-complexity').statusline_complexity()
 ```
+
+---
+
+## 🧪 Running Tests
+
+To run the tests for this plugin, ensure you have `busted` installed. You can install it using `luarocks`:
+
+```bash
+luarocks install busted
+```
+
+Then, navigate to the plugin's root directory and run:
+
+```bash
+busted tests
+```
+
+This will execute all the test cases located in the `tests/` directory.
 
 ---
 

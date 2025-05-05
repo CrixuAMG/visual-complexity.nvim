@@ -21,10 +21,22 @@ local defaults = {
 		{ max = 25, group = "WarningMsg" },
 		{ max = math.huge, group = "ErrorMsg" },
 	},
+	threshold_for_warnings = 15, -- New threshold for showing warnings above lines
 }
 
+local function deep_extend(target, source)
+	for k, v in pairs(source) do
+		if type(v) == "table" and type(target[k]) == "table" then
+			target[k] = deep_extend(target[k], v)
+		else
+			target[k] = v
+		end
+	end
+	return target
+end
+
 function M.setup(user_config)
-	M.options = vim.tbl_deep_extend("force", {}, defaults, user_config or {})
+	M.options = deep_extend(deep_extend({}, defaults), user_config or {})
 end
 
 setmetatable(M, {
