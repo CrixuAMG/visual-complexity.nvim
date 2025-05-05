@@ -15,7 +15,11 @@ function M.show_file_complexity(calculate_visual_complexity)
 		return
 	end
 	local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-	local complexity, f, c = calculate_visual_complexity(lines)
+	local complexity, f, c, annotations = calculate_visual_complexity(lines)
+
+	-- Display annotations
+	require("visual-complexity.annotations").show(bufnr, annotations)
+
 	print(string.format("File Complexity: %.2f  |  Functions: %d  |  Conditionals: %d", complexity, f, c))
 end
 

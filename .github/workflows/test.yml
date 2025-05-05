@@ -1,0 +1,31 @@
+name: Test Neovim Package
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Neovim
+        uses: rcmdnk/neovim-action@v2
+        with:
+          neovim_version: stable
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y luarocks
+          luarocks install busted
+
+      - name: Run tests
+        run: |
+          nvim --headless -c 'lua require("busted.runner")({})' -c 'qa!'
