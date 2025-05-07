@@ -54,4 +54,14 @@ function M.create_bar(score)
 	return string.rep("█", filled) .. string.rep("░", max_blocks - filled)
 end
 
+function M.display_virtual_text(bufnr, line, score, func_count, cond_count)
+	local config = require("visual-complexity.config").options
+	local virt_text = string.format(config.virtual_text_format, score, func_count, cond_count)
+	local bar = M.create_bar(score)
+	vim.api.nvim_buf_set_extmark(bufnr, require("visual-complexity.shared").namespace_id, line, 0, {
+		virt_text = { { bar .. " " .. virt_text, config.highlight_group } },
+		virt_text_pos = "eol",
+	})
+end
+
 return M

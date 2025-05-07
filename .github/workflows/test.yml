@@ -1,32 +1,22 @@
 name: Test Neovim Package
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+  pull_request: ~
+  push: ~
 
 jobs:
-  test:
+  build:
+    name: Run tests
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Set up Neovim
-        uses: shunsambongi/setup-nvim@v1
-        with:
-          version: stable
-
+      - uses: actions/checkout@v4
+      - uses: MunifTanjim/setup-neovim-action@v1
+      - run: |
+          nvim --version
       - name: Install dependencies
         run: |
-          sudo apt-get update && sudo apt-get install -y luarocks
-          luarocks install busted
-          busted --version
-
+          sudo apt-get update; sudo apt-get install -y luarocks
+          sudo luarocks install busted
       - name: Run tests
         run: |
           busted tests

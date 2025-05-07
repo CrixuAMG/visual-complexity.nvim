@@ -1,5 +1,5 @@
 local M = {}
-local annotation_ns_id = vim.api.nvim_create_namespace("nvim_visual_complexity_annotations")
+local annotation_ns_id = require("visual-complexity.shared").namespace_id
 
 function M.show(bufnr, annotations)
 	vim.api.nvim_buf_clear_namespace(bufnr, annotation_ns_id, 0, -1)

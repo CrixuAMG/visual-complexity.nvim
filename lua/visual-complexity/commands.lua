@@ -18,7 +18,8 @@ function M.show_file_complexity(calculate_visual_complexity)
 	local complexity, f, c, annotations = calculate_visual_complexity(lines)
 
 	-- Display annotations
-	require("visual-complexity.annotations").show(bufnr, annotations)
+	local annotations_module = require("visual-complexity.annotations")
+	annotations_module.show(bufnr, annotations)
 
 	print(string.format("File Complexity: %.2f  |  Functions: %d  |  Conditionals: %d", complexity, f, c))
 end
